@@ -1,0 +1,10 @@
+[package]
+name = "erasure-coding"
+description = "High performance erasure coding algorithms, including Reed Solomon"
+version = "0.0.0"
+repository = "https://github.com/cberner/erasure-coding"
+authors = ["Christopher Berner <christopherberner@gmail.com>"]
+license = "MIT OR Apache-2.0"
+edition = "2018"
+
+[dependencies]
