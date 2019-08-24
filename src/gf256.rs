@@ -106,6 +106,16 @@ impl Octet {
             }
         }
     }
+
+    pub fn pow(&self, power: i32) -> Octet {
+        let mut i = OCT_LOG[self.value as usize] as i32 * power % 255;
+
+        while i < 0 {
+            i += 255;
+        }
+
+        Octet::new(OCT_EXP[i as usize])
+    }
 }
 
 impl Add for Octet {
@@ -208,13 +218,181 @@ impl<'a, 'b> Div<&'b Octet> for &'a Octet {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct Polynomial {
+    // largest is 0: x^2 + x + c
+    // x^2 is 0 index
+    pub coefficients: Vec<Octet>
+}
+
+impl Polynomial {
+    pub fn create_generator_polynomial(degree: u8) -> Polynomial {
+        let mut generator = Polynomial {
+            coefficients: vec![Octet::one()]
+        };
+
+        for i in 0..degree {
+            let poly = Polynomial {
+                coefficients: vec![Octet::one(), Octet::alpha(i)]
+            };
+            generator = generator.mul(&poly);
+        }
+
+        generator
+    }
+
+    pub fn new(coefficients: &[u8]) -> Polynomial {
+        Polynomial {
+            coefficients: coefficients.iter().map(|x| Octet::new(*x)).collect()
+        }
+    }
+
+    pub fn into_coefficients(self) -> Vec<u8> {
+        self.coefficients.iter().map(Octet::byte).collect()
+    }
+
+    pub fn mul_scalar(&self, scalar: &Octet) -> Polynomial {
+        let mut cloned = self.coefficients.clone();
+        for value in cloned.iter_mut() {
+            *value = value as &Octet * scalar;
+        }
+
+        Polynomial {
+            coefficients: cloned
+        }
+    }
+
+    pub fn add(&self, other: &Polynomial) -> Polynomial {
+        assert_eq!(self.coefficients.len(), other.coefficients.len());
+        let mut result = vec![];
+        for i in 0..self.coefficients.len() {
+            result.push(&self.coefficients[i] + &other.coefficients[i]);
+        }
+
+        Polynomial {
+            coefficients: result
+        }
+    }
+
+    pub fn mul(&self, other: &Polynomial) -> Polynomial {
+        let mut result = vec![Octet::zero(); self.coefficients.len() + other.coefficients.len() - 1];
+        for i in 0..self.coefficients.len() {
+            for j in 0..other.coefficients.len() {
+                result[i + j] += &self.coefficients[i] * &other.coefficients[j];
+            }
+        }
+
+        Polynomial {
+            coefficients: result
+        }
+    }
+
+    pub fn div(&self, divisor: &Polynomial) -> (Polynomial, Polynomial) {
+        let mut result = self.coefficients.clone();
+
+        for i in 0..(self.coefficients.len() - (divisor.coefficients.len() - 1)) {
+            let coefficient = result[i].clone();
+            if coefficient != Octet::zero() {
+                for j in 1..divisor.coefficients.len() {
+                    if divisor.coefficients[j] != Octet::zero() {
+                        result[i + j] += &divisor.coefficients[j] * &coefficient;
+                    }
+                }
+            }
+        }
+        let separator = result.len() - (divisor.coefficients.len() - 1);
+
+        let mut quotient = Polynomial {
+            coefficients: result[0..separator].to_owned()
+        };
+        let mut remainder = Polynomial {
+            coefficients: result[separator..].to_owned()
+        };
+
+        return (quotient, remainder);
+    }
+
+    // Horner's method of polynomial evaluation
+    pub fn eval(&self, x: &Octet) -> Octet {
+        let mut result = self.coefficients[0].clone();
+        for i in 1..self.coefficients.len() {
+            result = &(&result * &x) + &self.coefficients[i];
+        }
+        return result;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rand::Rng;
 
     use crate::gf256::Octet;
+    use crate::gf256::Polynomial;
     use crate::gf256::OCT_EXP;
     use crate::gf256::OCT_LOG;
+
+    #[test]
+    fn polynomial_multiply_scalar() {
+        let octet = Octet {
+            value: rand::thread_rng().gen(),
+        };
+        let octet2 = Octet {
+            value: rand::thread_rng().gen(),
+        };
+        let poly = Polynomial {
+            coefficients: vec![octet.clone()]
+        };
+        assert_eq!(&octet * &octet2, poly.mul_scalar(&octet2).coefficients[0]);
+    }
+
+    #[test]
+    fn polynomial_add() {
+        let octet = Octet {
+            value: rand::thread_rng().gen(),
+        };
+        let octet2 = Octet {
+            value: rand::thread_rng().gen(),
+        };
+        let poly = Polynomial {
+            coefficients: vec![octet.clone()]
+        };
+        let poly2 = Polynomial {
+            coefficients: vec![octet2.clone()]
+        };
+        assert_eq!(&octet + &octet2, poly.add(&poly2).coefficients[0]);
+    }
+
+    #[test]
+    fn polynomial_mul() {
+        let octet = Octet {
+            value: rand::thread_rng().gen_range(1, 255),
+        };
+        let octet2 = Octet {
+            value: rand::thread_rng().gen_range(1, 255),
+        };
+        let poly = Polynomial {
+            coefficients: vec![octet.clone(), octet2.clone()]
+        };
+        let poly2 = Polynomial::create_generator_polynomial(0);
+        assert_eq!(&poly, &poly.mul(&poly2));
+    }
+
+    #[test]
+    fn polynomial_div() {
+        let octet = Octet {
+            value: rand::thread_rng().gen_range(1, 255),
+        };
+        let octet2 = Octet {
+            value: rand::thread_rng().gen_range(1, 255),
+        };
+        let poly = Polynomial {
+            coefficients: vec![octet.clone(), octet2.clone()]
+        };
+        // TODO?
+//        assert_eq!(&poly, &poly.div(&poly).0);
+        let poly2 = Polynomial::create_generator_polynomial(2);
+//        assert_eq!(&poly, &poly.mul(&poly2).div(&poly2).0);
+    }
 
     #[test]
     fn addition() {
