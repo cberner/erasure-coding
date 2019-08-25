@@ -52,26 +52,26 @@ impl Decoder {
         let mut erasure_evaluator = self.calculate_erasure_evaluator(&syndrome, &locator);
         erasure_evaluator.coefficients.reverse();
 
-        let mut X = vec![];
+        let mut error_locations = vec![];
         let mut full_message_erasure_positions = vec![];
         for i in 0..data.len() {
             if data[i].is_none() {
                 full_message_erasure_positions.push(i);
                 let location = self.data_blocks + self.repair_blocks - 1 - i as u8;
                 let l = 255 - location as i32;
-                X.push(Octet::new(2).pow(-l));
+                error_locations.push(Octet::new(2).pow(-l));
             }
         }
 
-        let mut E = vec![Octet::zero(); (self.data_blocks + self.repair_blocks) as usize];
-        let X_length = X.len();
-        for (i, Xi) in X.iter().enumerate() {
-            let Xi_inv = &Octet::one() / Xi;
+        let mut error_magnitudes = vec![Octet::zero(); (self.data_blocks + self.repair_blocks) as usize];
+        let error_count = error_locations.len();
+        for (i, error_value) in error_locations.iter().enumerate() {
+            let inverse_error_value = &Octet::one() / error_value;
 
             let mut prime_tmp = vec![];
-            for j in 0..X_length {
+            for j in 0..error_count {
                 if j != i {
-                    prime_tmp.push(Octet::one() - &Xi_inv * &X[j]);
+                    prime_tmp.push(Octet::one() - &inverse_error_value * &error_locations[j]);
                 }
             }
 
@@ -81,22 +81,22 @@ impl Decoder {
             }
 
             erasure_evaluator.coefficients.reverse();
-            let y = erasure_evaluator.eval(&Xi_inv);
+            let y = erasure_evaluator.eval(&inverse_error_value);
             erasure_evaluator.coefficients.reverse();
             // TODO: uh, this pow() seems to do nothing...
-            let y = Xi.pow(1) * y;
+            let y = error_value.pow(1) * y;
 
             assert_ne!(locator_prime, Octet::zero());
             let magnitude = y / locator_prime;
 
-            E[full_message_erasure_positions[i]] = magnitude;
+            error_magnitudes[full_message_erasure_positions[i]] = magnitude;
         }
 
         let mut full_with_zeros: Vec<u8> = data.iter().map(|x| x.unwrap_or(0)).collect();
         full_with_zeros.extend(repair);
         let full_poly = Polynomial::new(&full_with_zeros);
-        let E_bytes: Vec<u8> = E.iter().map(Octet::byte).collect();
-        return full_poly.add(&Polynomial::new(&E_bytes));
+        let error_bytes: Vec<u8> = error_magnitudes.iter().map(Octet::byte).collect();
+        return full_poly.add(&Polynomial::new(&error_bytes));
     }
 
     // TODO: support missing repair blocks
