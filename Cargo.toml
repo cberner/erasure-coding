@@ -11,3 +11,11 @@ edition = "2018"
 
 [dev-dependencies]
 rand = "0.7"
+
+[[bench]]
+name = "encode_benchmark"
+harness = false
+
+[[bench]]
+name = "decode_benchmark"
+harness = false
