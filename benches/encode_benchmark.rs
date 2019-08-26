@@ -15,7 +15,7 @@ fn black_box(value: u64) {
 fn main() {
     let mut black_box_value = 0;
     let shard_size = 1;
-    println!("Symbol size: {} bytes", shard_size);
+    println!("Shard size: {} bytes", shard_size);
     for (data_shards, repair_shards) in DATA_SHARD_COUNTS.iter().zip(REPAIR_SHARD_COUNTS.iter()) {
         let elements = data_shards * shard_size as usize;
         let mut data: Vec<u8> = vec![0; elements];
