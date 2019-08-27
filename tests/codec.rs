@@ -1,4 +1,4 @@
-use erasure_coding::{Encoder, Decoder};
+use erasure_coding::{Encoder, Decoder, Block};
 
 #[test]
 fn hello_world() {
@@ -8,7 +8,7 @@ fn hello_world() {
 
     let (data, repair) = encoder.encode(original_data);
 
-    let mut erased_data: Vec<Option<u8>> = data.into_iter().map(Some).collect();
+    let mut erased_data: Vec<Option<Block>> = data.into_iter().map(Some).collect();
     erased_data[0] = None;
     erased_data[1] = None;
     erased_data[2] = None;
@@ -26,7 +26,7 @@ fn round_trip() {
 
     let (data, repair) = encoder.encode(&original_data);
 
-    let mut erased_data: Vec<Option<u8>> = data.into_iter().map(Some).collect();
+    let mut erased_data: Vec<Option<Block>> = data.into_iter().map(Some).collect();
     erased_data[0] = None;
     erased_data[2] = None;
 

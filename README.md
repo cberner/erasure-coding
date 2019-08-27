@@ -3,25 +3,25 @@
 The following were run on an Intel Core i5-6600K @ 3.50GHz
 
 ```
-Shard size: 1 bytes
-data shards = 3, repair shards = 2, decoded 127 MB in 27.432secs, throughput: 37.3Mbit/s
-data shards = 7, repair shards = 2, decoded 127 MB in 14.101secs, throughput: 72.6Mbit/s
-data shards = 10, repair shards = 3, decoded 127 MB in 13.642secs, throughput: 75.1Mbit/s
-data shards = 30, repair shards = 5, decoded 127 MB in 9.293secs, throughput: 110.2Mbit/s
-data shards = 70, repair shards = 10, decoded 127 MB in 11.748secs, throughput: 87.2Mbit/s
-data shards = 100, repair shards = 10, decoded 127 MB in 10.344secs, throughput: 99.0Mbit/s
-data shards = 150, repair shards = 15, decoded 127 MB in 13.026secs, throughput: 78.6Mbit/s
-data shards = 200, repair shards = 20, decoded 127 MB in 16.989secs, throughput: 60.3Mbit/s
+Shard size: 512 bytes
+data shards = 3, repair shards = 2, decoded 127 MB in 28.589secs, throughput: 35.8Mbit/s
+data shards = 7, repair shards = 2, decoded 127 MB in 14.280secs, throughput: 71.7Mbit/s
+data shards = 10, repair shards = 3, decoded 127 MB in 13.295secs, throughput: 77.0Mbit/s
+data shards = 30, repair shards = 5, decoded 127 MB in 9.617secs, throughput: 106.5Mbit/s
+data shards = 70, repair shards = 10, decoded 127 MB in 12.333secs, throughput: 83.0Mbit/s
+data shards = 100, repair shards = 10, decoded 127 MB in 10.730secs, throughput: 95.4Mbit/s
+data shards = 150, repair shards = 15, decoded 127 MB in 14.038secs, throughput: 72.9Mbit/s
+data shards = 200, repair shards = 20, decoded 127 MB in 17.783secs, throughput: 57.6Mbit/s
 
-Shard size: 1 bytes
-data shards = 3, repair shards = 2, encoded 127 MB in 10.445secs, throughput: 98.0Mbit/s
-data shards = 7, repair shards = 2, encoded 127 MB in 5.116secs, throughput: 200.2Mbit/s
-data shards = 10, repair shards = 3, encoded 127 MB in 4.225secs, throughput: 242.4Mbit/s
-data shards = 30, repair shards = 5, encoded 127 MB in 2.676secs, throughput: 382.7Mbit/s
-data shards = 70, repair shards = 10, encoded 127 MB in 2.979secs, throughput: 343.7Mbit/s
-data shards = 100, repair shards = 10, encoded 127 MB in 2.575secs, throughput: 397.7Mbit/s
-data shards = 150, repair shards = 15, encoded 127 MB in 3.512secs, throughput: 291.6Mbit/s
-data shards = 200, repair shards = 20, encoded 127 MB in 4.253secs, throughput: 240.8Mbit/s
+Shard size: 512 bytes
+data shards = 3, repair shards = 2, encoded 127 MB in 4.078secs, throughput: 251.1Mbit/s
+data shards = 7, repair shards = 2, encoded 127 MB in 2.183secs, throughput: 469.1Mbit/s
+data shards = 10, repair shards = 3, encoded 127 MB in 1.797secs, throughput: 569.8Mbit/s
+data shards = 30, repair shards = 5, encoded 127 MB in 1.404secs, throughput: 729.3Mbit/s
+data shards = 70, repair shards = 10, encoded 127 MB in 1.959secs, throughput: 522.6Mbit/s
+data shards = 100, repair shards = 10, encoded 127 MB in 1.909secs, throughput: 536.3Mbit/s
+data shards = 150, repair shards = 15, encoded 127 MB in 2.721secs, throughput: 376.2Mbit/s
+data shards = 200, repair shards = 20, encoded 127 MB in 3.518secs, throughput: 290.9Mbit/s
 ```
 ## License
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fcberner%2Ferasure-coding.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fcberner%2Ferasure-coding?ref=badge_shield)
