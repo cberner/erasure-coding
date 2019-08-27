@@ -1,4 +1,17 @@
-use crate::gf256::{Polynomial, Octet};
+use crate::gf256::{Polynomial, fused_addassign_mul_scalar};
+
+fn get_both_indices<T>(vector: &mut Vec<T>, i: usize, j: usize) -> (&mut T, &mut T) {
+    debug_assert_ne!(i, j);
+    debug_assert!(i < vector.len());
+    debug_assert!(j < vector.len());
+    if i < j {
+        let (first, last) = vector.split_at_mut(j);
+        return (&mut first[i], &mut last[0]);
+    } else {
+        let (first, last) = vector.split_at_mut(i);
+        return (&mut last[0], &mut first[j]);
+    }
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct BlockPolynomial {
@@ -20,12 +33,11 @@ impl BlockPolynomial {
     pub fn div(&self, divisor: &Polynomial) -> (BlockPolynomial, BlockPolynomial) {
         let mut result = self.coefficient_arrays.clone();
 
-        for position in 0..self.coefficient_arrays[0].len() {
-            for i in 0..(self.coefficient_arrays.len() - (divisor.coefficients.len() - 1)) {
-                let coefficient = result[i][position].clone();
-                for j in 1..divisor.coefficients.len() {
-                    result[i + j][position] = (Octet::new(result[i + j][position]) + (&divisor.coefficients[j] * &Octet::new(coefficient))).byte();
-                }
+        for i in 0..(self.coefficient_arrays.len() - (divisor.coefficients.len() - 1)) {
+            for j in 1..divisor.coefficients.len() {
+                let both: (&mut Vec<u8>, &mut Vec<u8>) = get_both_indices(&mut result, i + j, i);
+                let (dest, src) = both;
+                fused_addassign_mul_scalar(dest, src, &divisor.coefficients[j]);
             }
         }
         let separator = result.len() - (divisor.coefficients.len() - 1);
