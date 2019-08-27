@@ -281,12 +281,8 @@ impl Polynomial {
 
         for i in 0..(self.coefficients.len() - (divisor.coefficients.len() - 1)) {
             let coefficient = result[i].clone();
-            if coefficient != Octet::zero() {
-                for j in 1..divisor.coefficients.len() {
-                    if divisor.coefficients[j] != Octet::zero() {
-                        result[i + j] += &divisor.coefficients[j] * &coefficient;
-                    }
-                }
+            for j in 1..divisor.coefficients.len() {
+                result[i + j] += &divisor.coefficients[j] * &coefficient;
             }
         }
         let separator = result.len() - (divisor.coefficients.len() - 1);
