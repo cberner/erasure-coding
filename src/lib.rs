@@ -1,4 +1,5 @@
 mod base;
+mod block_polynomial;
 mod decoder;
 mod encoder;
 mod gf256;

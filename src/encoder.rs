@@ -1,5 +1,6 @@
 use crate::gf256::Polynomial;
 use crate::base::Block;
+use crate::block_polynomial::BlockPolynomial;
 
 pub struct Encoder {
     data_blocks: u8,
@@ -25,29 +26,15 @@ impl Encoder {
             data_blocks.push(data[i * block_length..(i + 1)*block_length].to_vec())
         }
 
-        let mut repair_blocks = vec![Vec::with_capacity(block_length); self.repair_blocks as usize];
+        let mut encode_blocks = data_blocks.clone();
+        let repair_blocks = vec![vec![0; block_length]; self.repair_blocks as usize];
+        encode_blocks.extend(repair_blocks);
         let generator_polynomial = Polynomial::create_generator_polynomial(self.repair_blocks);
 
-        // Allocate this outside the loop to avoid excess memory allocations
-        let mut coefficients = vec![0; (self.data_blocks + self.repair_blocks) as usize];
-        for i in 0..block_length {
-            // Encode one byte from each block, so that the polynomial spans all the blocks
-            for j in 0..self.data_blocks as usize {
-                coefficients[j] = data_blocks[j][i];
-            }
-            // Set all repair coefficients to zero
-            for j in 0..self.repair_blocks as usize {
-                coefficients[self.data_blocks as usize + j] = 0;
-            }
+        let block_poly = BlockPolynomial::new(encode_blocks);
+        let (_, repair_poly) = block_poly.div(&generator_polynomial);
 
-            let poly = Polynomial::new(&coefficients);
-            let (_, remainder) = poly.div(&generator_polynomial);
-            for j in 0..self.repair_blocks as usize {
-                repair_blocks[j].push(remainder.coefficients[j].byte());
-            }
-        }
-
-        return (data_blocks, repair_blocks);
+        return (data_blocks, repair_poly.coefficient_arrays);
     }
 }
 
