@@ -1,4 +1,5 @@
 use crate::gf256::{Polynomial, Octet};
+use crate::base::Block;
 
 pub struct Decoder {
     data_blocks: u8,
@@ -101,15 +102,34 @@ impl Decoder {
 
     // TODO: support missing repair blocks
     // Returns tuple of (data blocks, repair blocks)
-    pub fn decode(&self, data: &[Option<u8>], repair: &[u8]) -> Vec<u8> {
-        // TODO: support blocks with more than 1 byte
+    pub fn decode(&self, data: &[Option<Block>], repair: &[Block]) -> Vec<u8> {
         assert_eq!(data.len(), self.data_blocks as usize);
         assert_eq!(repair.len(), self.repair_blocks as usize);
+        let block_length = repair[0].len();
+        let mut repaired = vec![0; self.data_blocks as usize * block_length];
 
-        let syndrome = self.calculate_syndrome(data, repair);
-        let poly = self.correct_erasures(&syndrome, data, repair);
-        let mut repaired = poly.into_coefficients();
-        repaired.truncate(self.data_blocks as usize);
+        // Allocate this outside the loop to avoid excess memory allocations
+        let mut data_coefficients = vec![None; self.data_blocks as usize];
+        let mut repair_coefficients = vec![0; self.repair_blocks as usize];
+        for i in 0..block_length {
+            // Take the i'th byte out of each block, since the polynomials span the blocks
+            for j in 0..self.data_blocks as usize {
+                if let Some(ref data_block) = data[j] {
+                    data_coefficients[j] = Some(data_block[i]);
+                } else {
+                    data_coefficients[j] = None;
+                }
+            }
+            for j in 0..self.repair_blocks as usize {
+                repair_coefficients[j] = repair[j][i];
+            }
+            let syndrome = self.calculate_syndrome(&data_coefficients, &repair_coefficients);
+            let poly = self.correct_erasures(&syndrome, &data_coefficients, &repair_coefficients);
+            let repaired_data = poly.into_coefficients();
+            for j in 0..self.data_blocks as usize {
+                repaired[j*block_length + i] = repaired_data[j];
+            }
+        }
 
         return repaired;
     }

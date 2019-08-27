@@ -1,6 +1,6 @@
 use rand::Rng;
 use std::time::Instant;
-use erasure_coding::{Encoder, Decoder};
+use erasure_coding::{Encoder, Decoder, Block};
 
 const TARGET_TOTAL_BYTES: usize = 128 * 1024 * 1024;
 const DATA_SHARD_COUNTS: [usize; 8] = [3, 7, 10, 30, 70, 100, 150, 200];
@@ -23,12 +23,12 @@ fn benchmark(shard_size: u16) -> u64 {
 
         let iterations = TARGET_TOTAL_BYTES / elements;
         let encoder = Encoder::new(*data_shards as u8, *repair_shards as u8);
-        let (_, repair) = encoder.encode(&data);
+        let (data_blocks, repair) = encoder.encode(&data);
         let mut erased_datas = vec![];
         for _ in 0..iterations {
-            let mut erased: Vec<Option<u8>> = data.iter().map(|x| Some(*x)).collect();
+            let mut erased: Vec<Option<Block>> = data_blocks.iter().map(|x| Some(x.clone())).collect();
             for _ in 0..*repair_shards {
-                let i = rand::thread_rng().gen_range(0, elements);
+                let i = rand::thread_rng().gen_range(0, *data_shards);
                 erased[i] = None;
             }
             erased_datas.push(erased);
@@ -54,7 +54,7 @@ fn benchmark(shard_size: u16) -> u64 {
 }
 
 fn main() {
-    let symbol_size = 1;
+    let symbol_size = 512;
     println!("Shard size: {} bytes", symbol_size);
     black_box(benchmark(symbol_size));
 }

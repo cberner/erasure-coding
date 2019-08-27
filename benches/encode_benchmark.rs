@@ -14,7 +14,7 @@ fn black_box(value: u64) {
 
 fn main() {
     let mut black_box_value = 0;
-    let shard_size = 1;
+    let shard_size = 512;
     println!("Shard size: {} bytes", shard_size);
     for (data_shards, repair_shards) in DATA_SHARD_COUNTS.iter().zip(REPAIR_SHARD_COUNTS.iter()) {
         let elements = data_shards * shard_size as usize;
@@ -28,7 +28,7 @@ fn main() {
         for _ in 0..iterations {
             let encoder = Encoder::new(*data_shards as u8, *repair_shards as u8);
             let (_, repair) = encoder.encode(&data);
-            black_box_value += repair[0] as u64;
+            black_box_value += repair[0][0] as u64;
         }
         let elapsed = now.elapsed();
         let elapsed = elapsed.as_secs() as f64 + elapsed.subsec_millis() as f64 * 0.001;
