@@ -50,7 +50,7 @@ impl BlockPolynomial {
         let separator = result.len() - (divisor.coefficients.len() - 1);
 
         let remainder = BlockPolynomial{
-            coefficient_arrays: result[separator..].to_owned()
+            coefficient_arrays: result.drain(separator..).collect()
         };
 
         return remainder;
