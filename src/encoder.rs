@@ -19,7 +19,7 @@ impl Encoder {
     pub fn encode(&self, data: &[u8]) -> (Vec<Block>, Vec<Block>) {
         assert_eq!(data.len() % self.data_blocks as usize, 0);
         let block_length = data.len() / self.data_blocks as usize;
-        // Data stripped across blocks: [0, block_length) in the first block,
+        // Data striped across blocks: [0, block_length) in the first block,
         // then [block_length, 2 * block_length) in the second
         let mut data_blocks = vec![];
         for i in 0..self.data_blocks as usize {
