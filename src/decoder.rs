@@ -67,22 +67,15 @@ impl Decoder {
         for (i, error_value) in error_locations.iter().enumerate() {
             let inverse_error_value = &Octet::one() / error_value;
 
-            let mut prime_tmp = vec![];
+            let mut locator_prime = Octet::one();
             for j in 0..error_count {
                 if j != i {
-                    prime_tmp.push(Octet::one() - &inverse_error_value * &error_locations[j]);
+                    locator_prime = &locator_prime * &(Octet::one() - &inverse_error_value * &error_locations[j]);
                 }
             }
-
-            let mut locator_prime = Octet::one();
-            for value in prime_tmp.iter() {
-                locator_prime = &locator_prime * value;
-            }
-
-            let y = erasure_evaluator.eval(&inverse_error_value);
-            let y = error_value * &y;
-
             assert_ne!(locator_prime, Octet::zero());
+
+            let y = error_value * &erasure_evaluator.eval(&inverse_error_value);
             let magnitude = y / locator_prime;
 
             error_magnitudes[full_message_erasure_positions[i]] = magnitude;
