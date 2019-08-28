@@ -23,6 +23,7 @@ impl Decoder {
         for i in 0..self.repair_blocks {
             syndrome[i as usize + 1] = full_poly.eval(&Octet::alpha(i)).byte();
         }
+        syndrome.reverse();
         return Polynomial::new(&syndrome);
     }
 
@@ -48,10 +49,7 @@ impl Decoder {
     // Forney algorithm
     fn correct_erasures(&self, syndrome: &Polynomial, data: &[Option<u8>], repair: &[u8]) -> Polynomial {
         let locator = self.calculate_erasure_locator(data);
-        let mut syndrome = syndrome.clone();
-        syndrome.coefficients.reverse();
-        let mut erasure_evaluator = self.calculate_erasure_evaluator(&syndrome, &locator);
-        erasure_evaluator.coefficients.reverse();
+        let erasure_evaluator = self.calculate_erasure_evaluator(&syndrome, &locator);
 
         let mut error_locations = vec![];
         let mut full_message_erasure_positions = vec![];
@@ -81,9 +79,7 @@ impl Decoder {
                 locator_prime = &locator_prime * value;
             }
 
-            erasure_evaluator.coefficients.reverse();
             let y = erasure_evaluator.eval(&inverse_error_value);
-            erasure_evaluator.coefficients.reverse();
             let y = error_value * &y;
 
             assert_ne!(locator_prime, Octet::zero());
