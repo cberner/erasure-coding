@@ -1,4 +1,6 @@
-### Benchmarks
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fcberner%2Ferasure-coding.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fcberner%2Ferasure-coding?ref=badge_shield)
+
+## Benchmarks
 
 The following were run on an Intel Core i5-6600K @ 3.50GHz
 
@@ -24,8 +26,6 @@ data shards = 150, repair shards = 15, encoded 127 MB in 0.098secs, throughput: 
 data shards = 200, repair shards = 20, encoded 127 MB in 0.131secs, throughput: 976.6MB/s
 ```
 ## License
-[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fcberner%2Ferasure-coding.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fcberner%2Ferasure-coding?ref=badge_shield)
-
 
 Licensed under either of
 
