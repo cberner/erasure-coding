@@ -35,10 +35,12 @@ impl BlockPolynomial {
         self.coefficient_arrays
     }
 
-    pub fn div_remainder(&self, divisor: &Polynomial) -> BlockPolynomial {
+    // First extends the polynomial with zeros, then returns the remainder divided by divisor
+    pub fn zero_extend_div_remainder(&self, zeros: usize, divisor: &Polynomial) -> BlockPolynomial {
         let mut result = self.coefficient_arrays.clone();
+        result.extend(vec![vec![0; self.coefficient_arrays[0].len()]; zeros]);
 
-        for i in 0..(self.coefficient_arrays.len() - (divisor.coefficients.len() - 1)) {
+        for i in 0..(result.len() - (divisor.coefficients.len() - 1)) {
             for j in 1..divisor.coefficients.len() {
                 let both: (&mut Vec<u8>, &mut Vec<u8>) = get_both_indices(&mut result, i + j, i);
                 let (dest, src) = both;

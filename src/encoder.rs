@@ -4,14 +4,16 @@ use crate::block_polynomial::BlockPolynomial;
 
 pub struct Encoder {
     data_blocks: u8,
-    repair_blocks: u8
+    repair_blocks: u8,
+    generator: Polynomial
 }
 
 impl Encoder {
     pub fn new(data_blocks: u8, repair_blocks: u8) -> Encoder {
         Encoder {
             data_blocks,
-            repair_blocks
+            repair_blocks,
+            generator: Polynomial::create_generator_polynomial(repair_blocks)
         }
     }
 
@@ -26,16 +28,10 @@ impl Encoder {
             blocks.push(data[i * block_length..(i + 1)*block_length].to_vec())
         }
 
-        let repair_blocks = vec![vec![0; block_length]; self.repair_blocks as usize];
-        blocks.extend(repair_blocks);
-        let generator_polynomial = Polynomial::create_generator_polynomial(self.repair_blocks);
-
         let block_poly = BlockPolynomial::new(blocks);
-        let repair_poly = block_poly.div_remainder(&generator_polynomial);
-        let mut blocks = block_poly.into_blocks();
-        blocks.truncate(self.data_blocks as usize);
+        let repair_poly = block_poly.zero_extend_div_remainder(self.repair_blocks as usize, &self.generator);
 
-        return (blocks, repair_poly.coefficient_arrays);
+        return (block_poly.into_blocks(), repair_poly.coefficient_arrays);
     }
 }
 
