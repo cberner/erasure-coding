@@ -84,8 +84,7 @@ impl Decoder {
             erasure_evaluator.coefficients.reverse();
             let y = erasure_evaluator.eval(&inverse_error_value);
             erasure_evaluator.coefficients.reverse();
-            // TODO: uh, this pow() seems to do nothing...
-            let y = error_value.pow(1) * y;
+            let y = error_value * &y;
 
             assert_ne!(locator_prime, Octet::zero());
             let magnitude = y / locator_prime;
