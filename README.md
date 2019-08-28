@@ -1,4 +1,6 @@
 ## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fcberner%2Ferasure-coding.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fcberner%2Ferasure-coding?ref=badge_shield)
+
 
 Licensed under either of
 
@@ -8,6 +10,9 @@ Licensed under either of
    ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
 
 at your option.
+
+
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fcberner%2Ferasure-coding.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fcberner%2Ferasure-coding?ref=badge_large)
 
 ## Contribution
 
