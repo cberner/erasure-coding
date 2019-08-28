@@ -21,20 +21,21 @@ impl Encoder {
         let block_length = data.len() / self.data_blocks as usize;
         // Data striped across blocks: [0, block_length) in the first block,
         // then [block_length, 2 * block_length) in the second
-        let mut data_blocks = vec![];
+        let mut blocks = vec![];
         for i in 0..self.data_blocks as usize {
-            data_blocks.push(data[i * block_length..(i + 1)*block_length].to_vec())
+            blocks.push(data[i * block_length..(i + 1)*block_length].to_vec())
         }
 
-        let mut encode_blocks = data_blocks.clone();
         let repair_blocks = vec![vec![0; block_length]; self.repair_blocks as usize];
-        encode_blocks.extend(repair_blocks);
+        blocks.extend(repair_blocks);
         let generator_polynomial = Polynomial::create_generator_polynomial(self.repair_blocks);
 
-        let block_poly = BlockPolynomial::new(encode_blocks);
-        let (_, repair_poly) = block_poly.div(&generator_polynomial);
+        let block_poly = BlockPolynomial::new(blocks);
+        let repair_poly = block_poly.div_remainder(&generator_polynomial);
+        let mut blocks = block_poly.into_blocks();
+        blocks.truncate(self.data_blocks as usize);
 
-        return (data_blocks, repair_poly.coefficient_arrays);
+        return (blocks, repair_poly.coefficient_arrays);
     }
 }
 
