@@ -29,10 +29,10 @@ impl Decoder {
         return BlockPolynomial::new(syndrome);
     }
 
-    fn calculate_erasure_locator(&self, data: &[Option<u8>]) -> Polynomial {
+    fn calculate_erasure_locator(&self, erasures: &[bool]) -> Polynomial {
         let mut locator = Polynomial::new(&[1]);
-        for i in 0..data.len() {
-            if data[i].is_none() {
+        for i in 0..erasures.len() {
+            if erasures[i] {
                 let location = self.data_blocks + self.repair_blocks - 1 - i as u8;
                 locator = locator.mul(&Polynomial::new(&[Octet::alpha(location as u8).byte(), 1]));
             }
@@ -49,10 +49,7 @@ impl Decoder {
     }
 
     // Forney algorithm
-    fn correct_erasures(&self, syndrome: &Polynomial, data: &[Option<u8>], repair: &[u8]) -> Polynomial {
-        let locator = self.calculate_erasure_locator(data);
-        let erasure_evaluator = self.calculate_erasure_evaluator(&syndrome, &locator);
-
+    fn correct_erasures(&self, erasure_evaluator: &Polynomial, data: &[Option<u8>], repair: &[u8]) -> Polynomial {
         let mut error_locations = vec![];
         let mut full_message_erasure_positions = vec![];
         for i in 0..data.len() {
@@ -102,6 +99,8 @@ impl Decoder {
         let mut data_coefficients = vec![None; self.data_blocks as usize];
         let mut repair_coefficients = vec![0; self.repair_blocks as usize];
         let syndrome = self.calculate_syndrome(data, repair);
+        let erasures: Vec<bool> = data.iter().map(|x| x.is_none()).collect();
+        let locator = self.calculate_erasure_locator(&erasures);
         for i in 0..block_length {
             // Take the i'th byte out of each block, since the polynomials span the blocks
             for j in 0..self.data_blocks as usize {
@@ -114,11 +113,15 @@ impl Decoder {
             for j in 0..self.repair_blocks as usize {
                 repair_coefficients[j] = repair[j][i];
             }
-            let mut syndrome_poly = vec![0; syndrome.coefficient_arrays.len()];
+            let mut syndrome_coefficients = vec![0; syndrome.coefficient_arrays.len()];
             for j in 0..syndrome.coefficient_arrays.len() {
-                syndrome_poly[j] = syndrome.coefficient_arrays[j][i];
+                syndrome_coefficients[j] = syndrome.coefficient_arrays[j][i];
             }
-            let poly = self.correct_erasures(&Polynomial::new(&syndrome_poly), &data_coefficients, &repair_coefficients);
+            let syndrome_poly = Polynomial::new(&syndrome_coefficients);
+
+            let erasure_evaluator = self.calculate_erasure_evaluator(&syndrome_poly, &locator);
+
+            let poly = self.correct_erasures(&erasure_evaluator, &data_coefficients, &repair_coefficients);
             let repaired_data = poly.into_coefficients();
             for j in 0..self.data_blocks as usize {
                 repaired[j*block_length + i] = repaired_data[j];
@@ -136,8 +139,8 @@ mod tests {
 
     #[test]
     fn erasure_locator() {
-        let data = vec![None, Some(1), Some(2), None, None];
+        let erasures = vec![true, false, false, true, true];
         assert_eq!(Polynomial::new(&[19, 28, 152, 1]),
-                   Decoder::new(5, 3).calculate_erasure_locator(&data));
+                   Decoder::new(5, 3).calculate_erasure_locator(&erasures));
     }
 }
