@@ -1,4 +1,5 @@
 use crate::gf256::{Polynomial, fused_addassign_mul_scalar};
+use crate::Block;
 
 fn get_both_indices<T>(vector: &mut Vec<T>, i: usize, j: usize) -> (&mut T, &mut T) {
     debug_assert_ne!(i, j);
@@ -30,7 +31,11 @@ impl BlockPolynomial {
         }
     }
 
-    pub fn div(&self, divisor: &Polynomial) -> (BlockPolynomial, BlockPolynomial) {
+    pub fn into_blocks(self) -> Vec<Block> {
+        self.coefficient_arrays
+    }
+
+    pub fn div_remainder(&self, divisor: &Polynomial) -> BlockPolynomial {
         let mut result = self.coefficient_arrays.clone();
 
         for i in 0..(self.coefficient_arrays.len() - (divisor.coefficients.len() - 1)) {
@@ -42,13 +47,10 @@ impl BlockPolynomial {
         }
         let separator = result.len() - (divisor.coefficients.len() - 1);
 
-        let quotient = BlockPolynomial {
-            coefficient_arrays: result[..separator].to_owned()
-        };
         let remainder = BlockPolynomial{
             coefficient_arrays: result[separator..].to_owned()
         };
 
-        return (quotient, remainder);
+        return remainder;
     }
 }

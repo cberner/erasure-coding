@@ -14,14 +14,14 @@ data shards = 150, repair shards = 15, decoded 127 MB in 12.368secs, throughput:
 data shards = 200, repair shards = 20, decoded 127 MB in 15.846secs, throughput: 8.1MB/s
 
 Shard size: 512 bytes
-data shards = 3, repair shards = 2, encoded 127 MB in 0.090secs, throughput: 1422.2MB/s
-data shards = 7, repair shards = 2, encoded 127 MB in 0.070secs, throughput: 1828.6MB/s
-data shards = 10, repair shards = 3, encoded 127 MB in 0.075secs, throughput: 1706.6MB/s
-data shards = 30, repair shards = 5, encoded 127 MB in 0.075secs, throughput: 1706.6MB/s
-data shards = 70, repair shards = 10, encoded 127 MB in 0.110secs, throughput: 1163.4MB/s
-data shards = 100, repair shards = 10, encoded 127 MB in 0.104secs, throughput: 1230.6MB/s
-data shards = 150, repair shards = 15, encoded 127 MB in 0.153secs, throughput: 836.3MB/s
-data shards = 200, repair shards = 20, encoded 127 MB in 0.186secs, throughput: 687.8MB/s
+data shards = 3, repair shards = 2, encoded 127 MB in 0.072secs, throughput: 1777.8MB/s
+data shards = 7, repair shards = 2, encoded 127 MB in 0.048secs, throughput: 2666.7MB/s
+data shards = 10, repair shards = 3, encoded 127 MB in 0.051secs, throughput: 2509.8MB/s
+data shards = 30, repair shards = 5, encoded 127 MB in 0.055secs, throughput: 2327.2MB/s
+data shards = 70, repair shards = 10, encoded 127 MB in 0.079secs, throughput: 1619.9MB/s
+data shards = 100, repair shards = 10, encoded 127 MB in 0.078secs, throughput: 1640.8MB/s
+data shards = 150, repair shards = 15, encoded 127 MB in 0.101secs, throughput: 1266.9MB/s
+data shards = 200, repair shards = 20, encoded 127 MB in 0.125secs, throughput: 1023.4MB/s
 ```
 ## License
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fcberner%2Ferasure-coding.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fcberner%2Ferasure-coding?ref=badge_shield)
