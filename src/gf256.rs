@@ -1425,6 +1425,129 @@ pub fn fused_addassign_mul_scalar(octets: &mut [u8], other: &[u8], scalar: &Octe
     return fused_addassign_mul_scalar_fallback(octets, other, scalar);
 }
 
+fn mulassign_scalar_fallback(octets: &mut [u8], scalar: &Octet) {
+    let scalar_index = usize::from(scalar.byte());
+    for item in octets {
+        let octet_index = usize::from(*item);
+        // SAFETY: `OCTET_MUL` is a 256x256 matrix, both indexes are `u8` inputs.
+        *item = unsafe {
+            *OCTET_MUL
+                .get_unchecked(scalar_index)
+                .get_unchecked(octet_index)
+        };
+    }
+}
+
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[target_feature(enable = "avx2")]
+unsafe fn mulassign_scalar_avx2(octets: &mut [u8], scalar: &Octet) {
+    #[cfg(target_arch = "x86")]
+    use std::arch::x86::*;
+    #[cfg(target_arch = "x86_64")]
+    use std::arch::x86_64::*;
+
+    let low_mask = _mm256_set1_epi8(0x0F);
+    let hi_mask = _mm256_set1_epi8(0xF0 as u8 as i8);
+    let self_avx_ptr = octets.as_mut_ptr() as *mut __m256i;
+    let low_table =
+        _mm256_loadu_si256(OCTET_MUL_LOW_BITS[scalar.byte() as usize].as_ptr() as *const __m256i);
+    let hi_table =
+        _mm256_loadu_si256(OCTET_MUL_HI_BITS[scalar.byte() as usize].as_ptr() as *const __m256i);
+
+    for i in 0..(octets.len() / 32) {
+        let self_vec = _mm256_loadu_si256(self_avx_ptr.add(i));
+        let low = _mm256_and_si256(self_vec, low_mask);
+        let low_result = _mm256_shuffle_epi8(low_table, low);
+        let hi = _mm256_and_si256(self_vec, hi_mask);
+        let hi = _mm256_srli_epi64(hi, 4);
+        let hi_result = _mm256_shuffle_epi8(hi_table, hi);
+        let result = _mm256_xor_si256(hi_result, low_result);
+        _mm256_storeu_si256(self_avx_ptr.add(i), result);
+    }
+
+    let remainder = octets.len() % 32;
+    let scalar_index = scalar.byte() as usize;
+    for i in (octets.len() - remainder)..octets.len() {
+        *octets.get_unchecked_mut(i) = *OCTET_MUL
+            .get_unchecked(scalar_index)
+            .get_unchecked(*octets.get_unchecked(i) as usize);
+    }
+}
+
+pub fn mulassign_scalar(octets: &mut [u8], scalar: &Octet) {
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+        {
+            if is_x86_feature_detected!("avx2") {
+                unsafe {
+                    return mulassign_scalar_avx2(octets, scalar);
+                }
+            }
+        }
+
+    return mulassign_scalar_fallback(octets, scalar);
+}
+
+fn add_assign_fallback(octets: &mut [u8], other: &[u8]) {
+    assert_eq!(octets.len(), other.len());
+    let self_ptr = octets.as_mut_ptr() as *mut u64;
+    let other_ptr = other.as_ptr() as *const u64;
+    for i in 0..(octets.len() / 8) {
+        unsafe {
+            *self_ptr.add(i) ^= *other_ptr.add(i);
+        }
+    }
+    let remainder = octets.len() % 8;
+    for i in (octets.len() - remainder)..octets.len() {
+        unsafe {
+            *octets.get_unchecked_mut(i) ^= other.get_unchecked(i);
+        }
+    }
+}
+
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[target_feature(enable = "avx2")]
+unsafe fn add_assign_avx2(octets: &mut [u8], other: &[u8]) {
+    #[cfg(target_arch = "x86")]
+    use std::arch::x86::*;
+    #[cfg(target_arch = "x86_64")]
+    use std::arch::x86_64::*;
+
+    assert_eq!(octets.len(), other.len());
+    let self_avx_ptr = octets.as_mut_ptr() as *mut __m256i;
+    let other_avx_ptr = other.as_ptr() as *const __m256i;
+    for i in 0..(octets.len() / 32) {
+        let self_vec = _mm256_loadu_si256(self_avx_ptr.add(i));
+        let other_vec = _mm256_loadu_si256(other_avx_ptr.add(i));
+        let result = _mm256_xor_si256(self_vec, other_vec);
+        _mm256_storeu_si256(self_avx_ptr.add(i), result);
+    }
+
+    let remainder = octets.len() % 32;
+    let self_ptr = octets.as_mut_ptr() as *mut u64;
+    let other_ptr = other.as_ptr() as *const u64;
+    for i in ((octets.len() - remainder) / 8)..(octets.len() / 8) {
+        *self_ptr.add(i) ^= *other_ptr.add(i);
+    }
+
+    let remainder = octets.len() % 8;
+    for i in (octets.len() - remainder)..octets.len() {
+        *octets.get_unchecked_mut(i) ^= other.get_unchecked(i);
+    }
+}
+
+pub fn add_assign(octets: &mut [u8], other: &[u8]) {
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+        {
+            if is_x86_feature_detected!("avx2") {
+                unsafe {
+                    return add_assign_avx2(octets, other);
+                }
+            }
+        }
+
+    return add_assign_fallback(octets, other);
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Polynomial {
     // largest is 0: x^2 + x + c
@@ -1518,7 +1641,7 @@ impl Polynomial {
 mod tests {
     use rand::Rng;
 
-    use crate::gf256::{Octet, fused_addassign_mul_scalar};
+    use crate::gf256::{Octet, fused_addassign_mul_scalar, mulassign_scalar};
     use crate::gf256::Polynomial;
     use crate::gf256::OCT_EXP;
     use crate::gf256::OCT_LOG;
@@ -1606,6 +1729,22 @@ mod tests {
                 assert_eq!(result, fma_result);
             }
         }
+    }
+
+    #[test]
+    fn mul_assign_simd() {
+        let size = 41;
+        let scalar = Octet::new(rand::thread_rng().gen_range(1, 255));
+        let mut data1: Vec<u8> = vec![0; size];
+        let mut expected: Vec<u8> = vec![0; size];
+        for i in 0..size {
+            data1[i] = rand::thread_rng().gen();
+            expected[i] = (&Octet::new(data1[i]) * &scalar).byte();
+        }
+
+        mulassign_scalar(&mut data1, &scalar);
+
+        assert_eq!(expected, data1);
     }
 
     #[test]

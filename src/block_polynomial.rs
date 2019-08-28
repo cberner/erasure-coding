@@ -1,4 +1,4 @@
-use crate::gf256::{Polynomial, fused_addassign_mul_scalar};
+use crate::gf256::{Polynomial, fused_addassign_mul_scalar, Octet, mulassign_scalar, add_assign};
 use crate::Block;
 
 fn get_both_indices<T>(vector: &mut Vec<T>, i: usize, j: usize) -> (&mut T, &mut T) {
@@ -33,6 +33,16 @@ impl BlockPolynomial {
 
     pub fn into_blocks(self) -> Vec<Block> {
         self.coefficient_arrays
+    }
+
+    // Horner's method of polynomial evaluation
+    pub fn eval(&self, x: &Octet) -> Vec<u8> {
+        let mut result = self.coefficient_arrays[0].clone();
+        for i in 1..self.coefficient_arrays.len() {
+            mulassign_scalar(&mut result, x);
+            add_assign(&mut result, &self.coefficient_arrays[i]);
+        }
+        return result;
     }
 
     // First extends the polynomial with zeros, then returns the remainder divided by divisor
