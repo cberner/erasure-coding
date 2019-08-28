@@ -1,5 +1,6 @@
 use crate::gf256::{Polynomial, Octet};
 use crate::base::Block;
+use crate::block_polynomial::BlockPolynomial;
 
 pub struct Decoder {
     data_blocks: u8,
@@ -14,17 +15,18 @@ impl Decoder {
         }
     }
 
-    fn calculate_syndrome(&self, data: &[Option<u8>], repair: &[u8]) -> Polynomial {
-        let mut full_with_zeros: Vec<u8> = data.iter().map(|x| x.unwrap_or(0)).collect();
-        full_with_zeros.extend(repair);
-        let full_poly = Polynomial::new(&full_with_zeros);
+    fn calculate_syndrome(&self, data: &[Option<Block>], repair: &[Block]) -> BlockPolynomial {
+        let block_length = repair[0].len();
+        let mut full_with_zeros: Vec<Block> = data.iter().map(|x| x.clone().unwrap_or(vec![0; block_length])).collect();
+        full_with_zeros.extend(repair.to_vec());
+        let full_poly = BlockPolynomial::new(full_with_zeros);
         // Pad with a zero
-        let mut syndrome = vec![0; self.repair_blocks as usize + 1];
+        let mut syndrome = vec![vec![0; block_length]];
         for i in 0..self.repair_blocks {
-            syndrome[i as usize + 1] = full_poly.eval(&Octet::alpha(i)).byte();
+            syndrome.push(full_poly.eval(&Octet::alpha(i)));
         }
         syndrome.reverse();
-        return Polynomial::new(&syndrome);
+        return BlockPolynomial::new(syndrome);
     }
 
     fn calculate_erasure_locator(&self, data: &[Option<u8>]) -> Polynomial {
@@ -99,6 +101,7 @@ impl Decoder {
         // Allocate this outside the loop to avoid excess memory allocations
         let mut data_coefficients = vec![None; self.data_blocks as usize];
         let mut repair_coefficients = vec![0; self.repair_blocks as usize];
+        let syndrome = self.calculate_syndrome(data, repair);
         for i in 0..block_length {
             // Take the i'th byte out of each block, since the polynomials span the blocks
             for j in 0..self.data_blocks as usize {
@@ -111,8 +114,11 @@ impl Decoder {
             for j in 0..self.repair_blocks as usize {
                 repair_coefficients[j] = repair[j][i];
             }
-            let syndrome = self.calculate_syndrome(&data_coefficients, &repair_coefficients);
-            let poly = self.correct_erasures(&syndrome, &data_coefficients, &repair_coefficients);
+            let mut syndrome_poly = vec![0; syndrome.coefficient_arrays.len()];
+            for j in 0..syndrome.coefficient_arrays.len() {
+                syndrome_poly[j] = syndrome.coefficient_arrays[j][i];
+            }
+            let poly = self.correct_erasures(&Polynomial::new(&syndrome_poly), &data_coefficients, &repair_coefficients);
             let repaired_data = poly.into_coefficients();
             for j in 0..self.data_blocks as usize {
                 repaired[j*block_length + i] = repaired_data[j];
