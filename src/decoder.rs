@@ -1,4 +1,4 @@
-use crate::gf256::{Polynomial, Octet, mulassign_scalar};
+use crate::gf256::{Polynomial, Octet, mulassign_scalar, add_assign};
 use crate::base::Block;
 use crate::block_polynomial::BlockPolynomial;
 
@@ -17,13 +17,27 @@ impl Decoder {
 
     fn calculate_syndrome(&self, data: &[Option<Block>], repair: &[Block]) -> BlockPolynomial {
         let block_length = repair[0].len();
-        let mut data_with_zeros: Vec<Block> = data.iter().map(|x| x.clone().unwrap_or(vec![0; block_length])).collect();
-        data_with_zeros.extend(repair.to_vec());
-        let data_poly = BlockPolynomial::new(data_with_zeros);
         // Pad with a zero
         let mut syndrome = vec![vec![0; block_length]];
         for i in 0..self.repair_blocks {
-            syndrome.push(data_poly.eval(&Octet::alpha(i)));
+            // Horner's method of polynomial evaluation
+            // inlined from BlockPolynomial::eval() to avoid extra copies
+            let mut result = if let Some(ref block) = data[0] {
+                block.clone()
+            } else {
+                vec![0; block_length]
+            };
+            for j in 1..data.len() {
+                mulassign_scalar(&mut result, &Octet::alpha(i as u8));
+                if let Some(ref block) = data[j] {
+                    add_assign(&mut result, block);
+                }
+            }
+            for j in 0..repair.len() {
+                mulassign_scalar(&mut result, &Octet::alpha(i as u8));
+                add_assign(&mut result, &repair[j]);
+            }
+            syndrome.push(result);
         }
         syndrome.reverse();
         return BlockPolynomial::new(syndrome);
