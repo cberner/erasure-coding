@@ -34,8 +34,8 @@ fn benchmark(shard_size: u16) -> u64 {
             erased_datas.push(erased);
         }
         let now = Instant::now();
+        let decoder = Decoder::new(*data_shards as u8, *repair_shards as u8);
         for i in 0..iterations {
-            let decoder = Decoder::new(*data_shards as u8, *repair_shards as u8);
             let result = decoder.decode(&erased_datas[i], &repair);
             black_box_value += result[0] as u64;
         }
