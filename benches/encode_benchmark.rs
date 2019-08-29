@@ -25,8 +25,8 @@ fn main() {
 
         let now = Instant::now();
         let iterations = TARGET_TOTAL_BYTES / elements;
+        let encoder = Encoder::new(*data_shards as u8, *repair_shards as u8);
         for _ in 0..iterations {
-            let encoder = Encoder::new(*data_shards as u8, *repair_shards as u8);
             let (_, repair) = encoder.encode(&data);
             black_box_value += repair[0][0] as u64;
         }
