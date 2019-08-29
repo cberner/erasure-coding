@@ -45,6 +45,27 @@ impl BlockPolynomial {
         return result;
     }
 
+    pub fn mul_poly(&self, other: &Polynomial) -> BlockPolynomial {
+        let block_length = self.coefficient_arrays[0].len();
+        let mut result = vec![vec![0u8; block_length]; self.coefficient_arrays.len() + other.coefficients.len() - 1];
+        for i in 0..self.coefficient_arrays.len() {
+            for j in 0..other.coefficients.len() {
+                if other.coefficients[j] == Octet::zero() {
+                    continue;
+                }
+                if other.coefficients[j] == Octet::one() {
+                    add_assign(&mut result[i + j], &self.coefficient_arrays[i]);
+                } else {
+                    fused_addassign_mul_scalar(&mut result[i + j], &self.coefficient_arrays[i], &other.coefficients[j]);
+                }
+            }
+        }
+
+        BlockPolynomial {
+            coefficient_arrays: result
+        }
+    }
+
     // First extends the polynomial with zeros, then returns the remainder divided by divisor
     pub fn zero_extend_div_remainder(&self, zeros: usize, divisor: &Polynomial) -> BlockPolynomial {
         let mut result = self.coefficient_arrays.clone();
@@ -54,7 +75,15 @@ impl BlockPolynomial {
             for j in 1..divisor.coefficients.len() {
                 let both: (&mut Vec<u8>, &mut Vec<u8>) = get_both_indices(&mut result, i + j, i);
                 let (dest, src) = both;
-                fused_addassign_mul_scalar(dest, src, &divisor.coefficients[j]);
+                if divisor.coefficients[j] == Octet::zero() {
+                    continue;
+                }
+                if divisor.coefficients[j] == Octet::one() {
+                    add_assign(dest, src);
+                }
+                else {
+                    fused_addassign_mul_scalar(dest, src, &divisor.coefficients[j]);
+                }
             }
         }
         let separator = result.len() - (divisor.coefficients.len() - 1);

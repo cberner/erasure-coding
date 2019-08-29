@@ -40,12 +40,11 @@ impl Decoder {
         return locator;
     }
 
-    fn calculate_erasure_evaluator(&self, syndrome: &Polynomial, erasure_locator: &Polynomial) -> Polynomial {
+    fn calculate_erasure_evaluator(&self, syndrome: &BlockPolynomial, erasure_locator: &Polynomial) -> BlockPolynomial {
         let mut poly = Polynomial::new(&vec![0; (erasure_locator.coefficients.len() + 1) as usize]);
         poly.coefficients[0] = Octet::one();
 
-        let (_, remainder) = syndrome.mul(erasure_locator).div(&poly);
-        return remainder
+        return syndrome.mul_poly(erasure_locator).zero_extend_div_remainder(0, &poly);
     }
 
     // Forney algorithm
@@ -101,6 +100,7 @@ impl Decoder {
         let syndrome = self.calculate_syndrome(data, repair);
         let erasures: Vec<bool> = data.iter().map(|x| x.is_none()).collect();
         let locator = self.calculate_erasure_locator(&erasures);
+        let erasure_evaluator = self.calculate_erasure_evaluator(&syndrome, &locator);
         for i in 0..block_length {
             // Take the i'th byte out of each block, since the polynomials span the blocks
             for j in 0..self.data_blocks as usize {
@@ -113,15 +113,14 @@ impl Decoder {
             for j in 0..self.repair_blocks as usize {
                 repair_coefficients[j] = repair[j][i];
             }
-            let mut syndrome_coefficients = vec![0; syndrome.coefficient_arrays.len()];
-            for j in 0..syndrome.coefficient_arrays.len() {
-                syndrome_coefficients[j] = syndrome.coefficient_arrays[j][i];
+            let mut erasure_evaluator_coefficients = vec![0; erasure_evaluator.coefficient_arrays.len()];
+            for j in 0..erasure_evaluator.coefficient_arrays.len() {
+                erasure_evaluator_coefficients[j] = erasure_evaluator.coefficient_arrays[j][i];
             }
-            let syndrome_poly = Polynomial::new(&syndrome_coefficients);
+            let erasure_evaluator_poly = Polynomial::new(&erasure_evaluator_coefficients);
 
-            let erasure_evaluator = self.calculate_erasure_evaluator(&syndrome_poly, &locator);
 
-            let poly = self.correct_erasures(&erasure_evaluator, &data_coefficients, &repair_coefficients);
+            let poly = self.correct_erasures(&erasure_evaluator_poly, &data_coefficients, &repair_coefficients);
             let repaired_data = poly.into_coefficients();
             for j in 0..self.data_blocks as usize {
                 repaired[j*block_length + i] = repaired_data[j];
