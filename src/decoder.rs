@@ -73,8 +73,8 @@ impl Decoder {
             }
             assert_ne!(locator_prime, Octet::zero());
 
-            let y = error_value * &erasure_evaluator.eval(&inverse_error_value);
-            let magnitude = y / locator_prime;
+            let y = erasure_evaluator.eval(&inverse_error_value);
+            let magnitude = y * (error_value / &locator_prime);
 
             error_magnitudes[full_message_erasure_positions[i]] = magnitude;
         }
