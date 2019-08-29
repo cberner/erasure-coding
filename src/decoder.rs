@@ -48,11 +48,11 @@ impl Decoder {
     }
 
     // Forney algorithm
-    fn correct_erasures(&self, erasure_evaluator: &Polynomial, data: &[Option<u8>], repair: &[u8]) -> Polynomial {
+    fn calculate_delta_correction(&self, erasure_evaluator: &Polynomial, erasures: &[bool]) -> Polynomial {
         let mut error_locations = vec![];
         let mut full_message_erasure_positions = vec![];
-        for i in 0..data.len() {
-            if data[i].is_none() {
+        for i in 0..erasures.len() {
+            if erasures[i] {
                 full_message_erasure_positions.push(i);
                 let location = self.data_blocks + self.repair_blocks - 1 - i as u8;
                 let l = 255 - location as i32;
@@ -79,11 +79,10 @@ impl Decoder {
             error_magnitudes[full_message_erasure_positions[i]] = magnitude;
         }
 
-        let mut full_with_zeros: Vec<u8> = data.iter().map(|x| x.unwrap_or(0)).collect();
-        full_with_zeros.extend(repair);
-        let full_poly = Polynomial::new(&full_with_zeros);
+        error_magnitudes.truncate(self.data_blocks as usize);
         let error_bytes: Vec<u8> = error_magnitudes.iter().map(Octet::byte).collect();
-        return full_poly.add(&Polynomial::new(&error_bytes));
+
+        return Polynomial::new(&error_bytes);
     }
 
     // TODO: support missing repair blocks
@@ -119,9 +118,12 @@ impl Decoder {
             }
             let erasure_evaluator_poly = Polynomial::new(&erasure_evaluator_coefficients);
 
+            let correction = self.calculate_delta_correction(&erasure_evaluator_poly, &erasures);
 
-            let poly = self.correct_erasures(&erasure_evaluator_poly, &data_coefficients, &repair_coefficients);
-            let repaired_data = poly.into_coefficients();
+            let data_with_zeros: Vec<u8> = data_coefficients.iter().map(|x| x.unwrap_or(0)).collect();
+            let data_poly = Polynomial::new(&data_with_zeros);
+
+            let repaired_data = data_poly.add(&correction).into_coefficients();
             for j in 0..self.data_blocks as usize {
                 repaired[j*block_length + i] = repaired_data[j];
             }
