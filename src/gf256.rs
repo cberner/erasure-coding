@@ -1577,22 +1577,6 @@ impl Polynomial {
         }
     }
 
-    pub fn into_coefficients(self) -> Vec<u8> {
-        self.coefficients.iter().map(Octet::byte).collect()
-    }
-
-    pub fn add(&self, other: &Polynomial) -> Polynomial {
-        assert_eq!(self.coefficients.len(), other.coefficients.len());
-        let mut result = vec![];
-        for i in 0..self.coefficients.len() {
-            result.push(&self.coefficients[i] + &other.coefficients[i]);
-        }
-
-        Polynomial {
-            coefficients: result
-        }
-    }
-
     pub fn mul(&self, other: &Polynomial) -> Polynomial {
         let mut result = vec![Octet::zero(); self.coefficients.len() + other.coefficients.len() - 1];
         for i in 0..self.coefficients.len() {
@@ -1605,36 +1589,6 @@ impl Polynomial {
             coefficients: result
         }
     }
-
-    pub fn div(&self, divisor: &Polynomial) -> (Polynomial, Polynomial) {
-        let mut result = self.coefficients.clone();
-
-        for i in 0..(self.coefficients.len() - (divisor.coefficients.len() - 1)) {
-            let coefficient = result[i].clone();
-            for j in 1..divisor.coefficients.len() {
-                result[i + j] += &divisor.coefficients[j] * &coefficient;
-            }
-        }
-        let separator = result.len() - (divisor.coefficients.len() - 1);
-
-        let quotient = Polynomial {
-            coefficients: result[0..separator].to_owned()
-        };
-        let remainder = Polynomial {
-            coefficients: result[separator..].to_owned()
-        };
-
-        return (quotient, remainder);
-    }
-
-    // Horner's method of polynomial evaluation
-    pub fn eval(&self, x: &Octet) -> Octet {
-        let mut result = self.coefficients[0].clone();
-        for i in 1..self.coefficients.len() {
-            result = &(&result * &x) + &self.coefficients[i];
-        }
-        return result;
-    }
 }
 
 #[cfg(test)]
@@ -1645,23 +1599,6 @@ mod tests {
     use crate::gf256::Polynomial;
     use crate::gf256::OCT_EXP;
     use crate::gf256::OCT_LOG;
-
-    #[test]
-    fn polynomial_add() {
-        let octet = Octet {
-            value: rand::thread_rng().gen(),
-        };
-        let octet2 = Octet {
-            value: rand::thread_rng().gen(),
-        };
-        let poly = Polynomial {
-            coefficients: vec![octet.clone()]
-        };
-        let poly2 = Polynomial {
-            coefficients: vec![octet2.clone()]
-        };
-        assert_eq!(&octet + &octet2, poly.add(&poly2).coefficients[0]);
-    }
 
     #[test]
     fn polynomial_mul() {

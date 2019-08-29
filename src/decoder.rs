@@ -1,4 +1,4 @@
-use crate::gf256::{Polynomial, Octet};
+use crate::gf256::{Polynomial, Octet, mulassign_scalar};
 use crate::base::Block;
 use crate::block_polynomial::BlockPolynomial;
 
@@ -48,7 +48,8 @@ impl Decoder {
     }
 
     // Forney algorithm
-    fn calculate_delta_correction(&self, erasure_evaluator: &Polynomial, erasures: &[bool]) -> Polynomial {
+    fn calculate_delta_correction(&self, erasure_evaluator: &BlockPolynomial, erasures: &[bool]) -> BlockPolynomial {
+        let block_length = erasure_evaluator.coefficient_arrays[0].len();
         let mut error_locations = vec![];
         let mut full_message_erasure_positions = vec![];
         for i in 0..erasures.len() {
@@ -60,7 +61,7 @@ impl Decoder {
             }
         }
 
-        let mut error_magnitudes = vec![Octet::zero(); (self.data_blocks + self.repair_blocks) as usize];
+        let mut error_magnitudes = vec![vec![0; block_length]; self.data_blocks as usize];
         let error_count = error_locations.len();
         for (i, error_value) in error_locations.iter().enumerate() {
             let inverse_error_value = &Octet::one() / error_value;
@@ -73,16 +74,13 @@ impl Decoder {
             }
             assert_ne!(locator_prime, Octet::zero());
 
-            let y = erasure_evaluator.eval(&inverse_error_value);
-            let magnitude = y * (error_value / &locator_prime);
+            let mut y = erasure_evaluator.eval(&inverse_error_value);
+            mulassign_scalar(&mut y, &(error_value / &locator_prime));
 
-            error_magnitudes[full_message_erasure_positions[i]] = magnitude;
+            error_magnitudes[full_message_erasure_positions[i]] = y;
         }
 
-        error_magnitudes.truncate(self.data_blocks as usize);
-        let error_bytes: Vec<u8> = error_magnitudes.iter().map(Octet::byte).collect();
-
-        return Polynomial::new(&error_bytes);
+        return BlockPolynomial::new(error_magnitudes);
     }
 
     // TODO: support missing repair blocks
@@ -91,42 +89,21 @@ impl Decoder {
         assert_eq!(data.len(), self.data_blocks as usize);
         assert_eq!(repair.len(), self.repair_blocks as usize);
         let block_length = repair[0].len();
-        let mut repaired = vec![0; self.data_blocks as usize * block_length];
+        let data_with_zeros: Vec<Block> = data.iter().map(|x| x.clone().unwrap_or(vec![0; block_length])).collect();
 
-        // Allocate this outside the loop to avoid excess memory allocations
-        let mut data_coefficients = vec![None; self.data_blocks as usize];
-        let mut repair_coefficients = vec![0; self.repair_blocks as usize];
         let syndrome = self.calculate_syndrome(data, repair);
         let erasures: Vec<bool> = data.iter().map(|x| x.is_none()).collect();
         let locator = self.calculate_erasure_locator(&erasures);
         let erasure_evaluator = self.calculate_erasure_evaluator(&syndrome, &locator);
-        for i in 0..block_length {
-            // Take the i'th byte out of each block, since the polynomials span the blocks
-            for j in 0..self.data_blocks as usize {
-                if let Some(ref data_block) = data[j] {
-                    data_coefficients[j] = Some(data_block[i]);
-                } else {
-                    data_coefficients[j] = None;
-                }
-            }
-            for j in 0..self.repair_blocks as usize {
-                repair_coefficients[j] = repair[j][i];
-            }
-            let mut erasure_evaluator_coefficients = vec![0; erasure_evaluator.coefficient_arrays.len()];
-            for j in 0..erasure_evaluator.coefficient_arrays.len() {
-                erasure_evaluator_coefficients[j] = erasure_evaluator.coefficient_arrays[j][i];
-            }
-            let erasure_evaluator_poly = Polynomial::new(&erasure_evaluator_coefficients);
+        let correction = self.calculate_delta_correction(&erasure_evaluator, &erasures);
 
-            let correction = self.calculate_delta_correction(&erasure_evaluator_poly, &erasures);
+        let mut data_with_zeros_poly = BlockPolynomial::new(data_with_zeros);
+        data_with_zeros_poly.addassign(&correction);
 
-            let data_with_zeros: Vec<u8> = data_coefficients.iter().map(|x| x.unwrap_or(0)).collect();
-            let data_poly = Polynomial::new(&data_with_zeros);
-
-            let repaired_data = data_poly.add(&correction).into_coefficients();
-            for j in 0..self.data_blocks as usize {
-                repaired[j*block_length + i] = repaired_data[j];
-            }
+        let repaired_data = data_with_zeros_poly.into_blocks();
+        let mut repaired = Vec::with_capacity(self.data_blocks as usize * block_length);
+        for j in 0..self.data_blocks as usize {
+            repaired.extend(repaired_data[j].clone());
         }
 
         return repaired;

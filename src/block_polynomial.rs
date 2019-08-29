@@ -45,6 +45,14 @@ impl BlockPolynomial {
         return result;
     }
 
+    pub fn addassign(&mut self, other: &BlockPolynomial) {
+        assert_eq!(self.coefficient_arrays.len(), other.coefficient_arrays.len());
+        assert_eq!(self.coefficient_arrays[0].len(), other.coefficient_arrays[0].len());
+        for i in 0..self.coefficient_arrays.len() {
+            add_assign(&mut self.coefficient_arrays[i], &other.coefficient_arrays[i])
+        }
+    }
+
     pub fn mul_poly(&self, other: &Polynomial) -> BlockPolynomial {
         let block_length = self.coefficient_arrays[0].len();
         let mut result = vec![vec![0u8; block_length]; self.coefficient_arrays.len() + other.coefficients.len() - 1];
