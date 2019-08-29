@@ -17,13 +17,13 @@ impl Decoder {
 
     fn calculate_syndrome(&self, data: &[Option<Block>], repair: &[Block]) -> BlockPolynomial {
         let block_length = repair[0].len();
-        let mut full_with_zeros: Vec<Block> = data.iter().map(|x| x.clone().unwrap_or(vec![0; block_length])).collect();
-        full_with_zeros.extend(repair.to_vec());
-        let full_poly = BlockPolynomial::new(full_with_zeros);
+        let mut data_with_zeros: Vec<Block> = data.iter().map(|x| x.clone().unwrap_or(vec![0; block_length])).collect();
+        data_with_zeros.extend(repair.to_vec());
+        let data_poly = BlockPolynomial::new(data_with_zeros);
         // Pad with a zero
         let mut syndrome = vec![vec![0; block_length]];
         for i in 0..self.repair_blocks {
-            syndrome.push(full_poly.eval(&Octet::alpha(i)));
+            syndrome.push(data_poly.eval(&Octet::alpha(i)));
         }
         syndrome.reverse();
         return BlockPolynomial::new(syndrome);
@@ -89,7 +89,6 @@ impl Decoder {
         assert_eq!(data.len(), self.data_blocks as usize);
         assert_eq!(repair.len(), self.repair_blocks as usize);
         let block_length = repair[0].len();
-        let data_with_zeros: Vec<Block> = data.iter().map(|x| x.clone().unwrap_or(vec![0; block_length])).collect();
 
         let syndrome = self.calculate_syndrome(data, repair);
         let erasures: Vec<bool> = data.iter().map(|x| x.is_none()).collect();
@@ -97,13 +96,18 @@ impl Decoder {
         let erasure_evaluator = self.calculate_erasure_evaluator(&syndrome, &locator);
         let correction = self.calculate_delta_correction(&erasure_evaluator, &erasures);
 
-        let mut data_with_zeros_poly = BlockPolynomial::new(data_with_zeros);
-        data_with_zeros_poly.addassign(&correction);
-
-        let repaired_data = data_with_zeros_poly.into_blocks();
+        let mut correction_blocks = correction.into_blocks();
         let mut repaired = Vec::with_capacity(self.data_blocks as usize * block_length);
         for j in 0..self.data_blocks as usize {
-            repaired.extend(repaired_data[j].clone());
+            if let Some(ref data_block) = data[j] {
+                repaired.extend(data_block.clone());
+            } else {
+                // Use swap remove to avoid having to clone this vec
+                correction_blocks.push(vec![]); // First push an empty vec to be swapped into place
+                let recovered = correction_blocks.swap_remove(j);
+                // We replace missing blocks with zeros, so the correction is equal to the recovered data
+                repaired.extend(recovered);
+            }
         }
 
         return repaired;
