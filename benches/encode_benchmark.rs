@@ -1,4 +1,4 @@
-use rand::Rng;
+use rand::RngExt;
 use std::time::Instant;
 use erasure_coding::Encoder;
 
@@ -7,7 +7,7 @@ const DATA_SHARD_COUNTS: [usize; 8] = [3, 7, 10, 30, 70, 100, 150, 200];
 const REPAIR_SHARD_COUNTS: [usize; 8] = [2, 2, 3, 5, 10, 10, 15, 20];
 
 fn black_box(value: u64) {
-    if value == rand::thread_rng().gen() {
+    if value == rand::rng().random() {
         println!("{}", value);
     }
 }
@@ -20,7 +20,7 @@ fn main() {
         let elements = data_shards * shard_size as usize;
         let mut data: Vec<u8> = vec![0; elements];
         for i in 0..elements {
-            data[i] = rand::thread_rng().gen();
+            data[i] = rand::rng().random();
         }
 
         let now = Instant::now();
