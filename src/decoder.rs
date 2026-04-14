@@ -1,17 +1,17 @@
-use crate::gf256::{Polynomial, Octet, mulassign_scalar, add_assign};
 use crate::base::Block;
 use crate::block_polynomial::BlockPolynomial;
+use crate::gf256::{add_assign, mulassign_scalar, Octet, Polynomial};
 
 pub struct Decoder {
     data_blocks: u8,
-    repair_blocks: u8
+    repair_blocks: u8,
 }
 
 impl Decoder {
     pub fn new(data_blocks: u8, repair_blocks: u8) -> Decoder {
         Decoder {
             data_blocks,
-            repair_blocks
+            repair_blocks,
         }
     }
 
@@ -27,47 +27,57 @@ impl Decoder {
             } else {
                 vec![0; block_length]
             };
-            for j in 1..data.len() {
-                mulassign_scalar(&mut result, &Octet::alpha(i as u8));
-                if let Some(ref block) = data[j] {
+            for item in data.iter().skip(1) {
+                mulassign_scalar(&mut result, &Octet::alpha(i));
+                if let Some(ref block) = item {
                     add_assign(&mut result, block);
                 }
             }
-            for j in 0..repair.len() {
-                mulassign_scalar(&mut result, &Octet::alpha(i as u8));
-                add_assign(&mut result, &repair[j]);
+            for block in repair {
+                mulassign_scalar(&mut result, &Octet::alpha(i));
+                add_assign(&mut result, block);
             }
             syndrome.push(result);
         }
         syndrome.reverse();
-        return BlockPolynomial::new(syndrome);
+        BlockPolynomial::new(syndrome)
     }
 
     fn calculate_erasure_locator(&self, erasures: &[bool]) -> Polynomial {
         let mut locator = Polynomial::new(&[1]);
-        for i in 0..erasures.len() {
-            if erasures[i] {
+        for (i, &is_erased) in erasures.iter().enumerate() {
+            if is_erased {
                 let location = self.data_blocks + self.repair_blocks - 1 - i as u8;
-                locator = locator.mul(&Polynomial::new(&[Octet::alpha(location as u8).byte(), 1]));
+                locator = locator.mul(&Polynomial::new(&[Octet::alpha(location).byte(), 1]));
             }
         }
-        return locator;
+        locator
     }
 
-    fn calculate_erasure_evaluator(&self, syndrome: &BlockPolynomial, erasure_locator: &Polynomial) -> BlockPolynomial {
-        let mut poly = Polynomial::new(&vec![0; (erasure_locator.coefficients.len() + 1) as usize]);
+    fn calculate_erasure_evaluator(
+        &self,
+        syndrome: &BlockPolynomial,
+        erasure_locator: &Polynomial,
+    ) -> BlockPolynomial {
+        let mut poly = Polynomial::new(&vec![0; erasure_locator.coefficients.len() + 1]);
         poly.coefficients[0] = Octet::one();
 
-        return syndrome.mul_poly(erasure_locator).zero_extend_div_remainder(0, &poly);
+        syndrome
+            .mul_poly(erasure_locator)
+            .zero_extend_div_remainder(0, &poly)
     }
 
     // Forney algorithm
-    fn calculate_delta_correction(&self, erasure_evaluator: &BlockPolynomial, erasures: &[bool]) -> BlockPolynomial {
+    fn calculate_delta_correction(
+        &self,
+        erasure_evaluator: &BlockPolynomial,
+        erasures: &[bool],
+    ) -> BlockPolynomial {
         let block_length = erasure_evaluator.coefficient_arrays[0].len();
         let mut error_locations = vec![];
         let mut full_message_erasure_positions = vec![];
-        for i in 0..erasures.len() {
-            if erasures[i] {
+        for (i, &is_erased) in erasures.iter().enumerate() {
+            if is_erased {
                 full_message_erasure_positions.push(i);
                 let location = self.data_blocks + self.repair_blocks - 1 - i as u8;
                 let l = 255 - location as i32;
@@ -76,14 +86,14 @@ impl Decoder {
         }
 
         let mut error_magnitudes = vec![vec![0; block_length]; self.data_blocks as usize];
-        let error_count = error_locations.len();
         for (i, error_value) in error_locations.iter().enumerate() {
             let inverse_error_value = &Octet::one() / error_value;
 
             let mut locator_prime = Octet::one();
-            for j in 0..error_count {
+            for (j, other_error) in error_locations.iter().enumerate() {
                 if j != i {
-                    locator_prime = &locator_prime * &(Octet::one() - &inverse_error_value * &error_locations[j]);
+                    locator_prime =
+                        &locator_prime * &(Octet::one() - &inverse_error_value * other_error);
                 }
             }
             assert_ne!(locator_prime, Octet::zero());
@@ -94,7 +104,7 @@ impl Decoder {
             error_magnitudes[full_message_erasure_positions[i]] = y;
         }
 
-        return BlockPolynomial::new(error_magnitudes);
+        BlockPolynomial::new(error_magnitudes)
     }
 
     // TODO: support missing repair blocks
@@ -112,8 +122,8 @@ impl Decoder {
 
         let mut correction_blocks = correction.into_blocks();
         let mut repaired = Vec::with_capacity(self.data_blocks as usize * block_length);
-        for j in 0..self.data_blocks as usize {
-            if let Some(ref data_block) = data[j] {
+        for (j, data_block) in data.iter().enumerate() {
+            if let Some(ref data_block) = data_block {
                 repaired.extend(data_block.clone());
             } else {
                 // Use swap remove to avoid having to clone this vec
@@ -124,19 +134,21 @@ impl Decoder {
             }
         }
 
-        return repaired;
+        repaired
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::Decoder;
     use crate::gf256::Polynomial;
+    use crate::Decoder;
 
     #[test]
     fn erasure_locator() {
         let erasures = vec![true, false, false, true, true];
-        assert_eq!(Polynomial::new(&[19, 28, 152, 1]),
-                   Decoder::new(5, 3).calculate_erasure_locator(&erasures));
+        assert_eq!(
+            Polynomial::new(&[19, 28, 152, 1]),
+            Decoder::new(5, 3).calculate_erasure_locator(&erasures)
+        );
     }
 }

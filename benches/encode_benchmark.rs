@@ -1,6 +1,6 @@
+use erasure_coding::Encoder;
 use rand::Rng;
 use std::time::Instant;
-use erasure_coding::Encoder;
 
 const TARGET_TOTAL_BYTES: usize = 128 * 1024 * 1024;
 const DATA_SHARD_COUNTS: [usize; 8] = [3, 7, 10, 30, 70, 100, 150, 200];
@@ -19,8 +19,8 @@ fn main() {
     for (data_shards, repair_shards) in DATA_SHARD_COUNTS.iter().zip(REPAIR_SHARD_COUNTS.iter()) {
         let elements = data_shards * shard_size as usize;
         let mut data: Vec<u8> = vec![0; elements];
-        for i in 0..elements {
-            data[i] = rand::thread_rng().gen();
+        for item in data.iter_mut() {
+            *item = rand::thread_rng().gen();
         }
 
         let now = Instant::now();
