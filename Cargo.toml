@@ -10,7 +10,7 @@ edition = "2018"
 [dependencies]
 
 [dev-dependencies]
-rand = "0.7"
+rand = "0.10.1"
 
 [[bench]]
 name = "encode_benchmark"

@@ -1593,7 +1593,7 @@ impl Polynomial {
 
 #[cfg(test)]
 mod tests {
-    use rand::Rng;
+    use rand::RngExt;
 
     use crate::gf256::{Octet, fused_addassign_mul_scalar, mulassign_scalar};
     use crate::gf256::Polynomial;
@@ -1603,10 +1603,10 @@ mod tests {
     #[test]
     fn polynomial_mul() {
         let octet = Octet {
-            value: rand::thread_rng().gen_range(1, 255),
+            value: rand::rng().random_range(1..255),
         };
         let octet2 = Octet {
-            value: rand::thread_rng().gen_range(1, 255),
+            value: rand::rng().random_range(1..255),
         };
         let poly = Polynomial {
             coefficients: vec![octet.clone(), octet2.clone()]
@@ -1618,7 +1618,7 @@ mod tests {
     #[test]
     fn addition() {
         let octet = Octet {
-            value: rand::thread_rng().gen(),
+            value: rand::rng().random(),
         };
         // See section 5.7.2. u is its own additive inverse
         assert_eq!(Octet::zero(), &octet + &octet);
@@ -1627,7 +1627,7 @@ mod tests {
     #[test]
     fn multiplication_identity() {
         let octet = Octet {
-            value: rand::thread_rng().gen(),
+            value: rand::rng().random(),
         };
         assert_eq!(octet, &octet * &Octet::one());
     }
@@ -1635,7 +1635,7 @@ mod tests {
     #[test]
     fn multiplicative_inverse() {
         let octet = Octet {
-            value: rand::thread_rng().gen_range(1, 255),
+            value: rand::rng().random_range(1..255),
         };
         let one = Octet::one();
         assert_eq!(one, &octet * &(&one / &octet));
@@ -1644,7 +1644,7 @@ mod tests {
     #[test]
     fn division() {
         let octet = Octet {
-            value: rand::thread_rng().gen_range(1, 255),
+            value: rand::rng().random_range(1..255),
         };
         assert_eq!(Octet::one(), &octet / &octet);
     }
@@ -1671,11 +1671,11 @@ mod tests {
     #[test]
     fn mul_assign_simd() {
         let size = 41;
-        let scalar = Octet::new(rand::thread_rng().gen_range(1, 255));
+        let scalar = Octet::new(rand::rng().random_range(1..255));
         let mut data1: Vec<u8> = vec![0; size];
         let mut expected: Vec<u8> = vec![0; size];
         for i in 0..size {
-            data1[i] = rand::thread_rng().gen();
+            data1[i] = rand::rng().random();
             expected[i] = (&Octet::new(data1[i]) * &scalar).byte();
         }
 
@@ -1687,13 +1687,13 @@ mod tests {
     #[test]
     fn fma_simd() {
         let size = 41;
-        let scalar = Octet::new(rand::thread_rng().gen_range(1, 255));
+        let scalar = Octet::new(rand::rng().random_range(1..255));
         let mut data1: Vec<u8> = vec![0; size];
         let mut data2: Vec<u8> = vec![0; size];
         let mut expected: Vec<u8> = vec![0; size];
         for i in 0..size {
-            data1[i] = rand::thread_rng().gen();
-            data2[i] = rand::thread_rng().gen();
+            data1[i] = rand::rng().random();
+            data2[i] = rand::rng().random();
             expected[i] = (Octet::new(data1[i]) + &Octet::new(data2[i]) * &scalar).byte();
         }
 
