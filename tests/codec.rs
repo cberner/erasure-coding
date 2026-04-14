@@ -1,4 +1,4 @@
-use erasure_coding::{Encoder, Decoder, Block};
+use erasure_coding::{Block, Decoder, Encoder};
 
 #[test]
 fn hello_world() {

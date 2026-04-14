@@ -1,6 +1,6 @@
+use erasure_coding::Encoder;
 use rand::Rng;
 use std::time::Instant;
-use erasure_coding::Encoder;
 
 const TARGET_TOTAL_BYTES: usize = 128 * 1024 * 1024;
 const DATA_SHARD_COUNTS: [usize; 8] = [3, 7, 10, 30, 70, 100, 150, 200];

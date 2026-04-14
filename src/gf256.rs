@@ -1414,13 +1414,13 @@ pub fn fused_addassign_mul_scalar(octets: &mut [u8], other: &[u8], scalar: &Octe
 
     assert_eq!(octets.len(), other.len());
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-        {
-            if is_x86_feature_detected!("avx2") {
-                unsafe {
-                    return fused_addassign_mul_scalar_avx2(octets, other, scalar);
-                }
+    {
+        if is_x86_feature_detected!("avx2") {
+            unsafe {
+                return fused_addassign_mul_scalar_avx2(octets, other, scalar);
             }
         }
+    }
 
     return fused_addassign_mul_scalar_fallback(octets, other, scalar);
 }
@@ -1476,13 +1476,13 @@ unsafe fn mulassign_scalar_avx2(octets: &mut [u8], scalar: &Octet) {
 
 pub fn mulassign_scalar(octets: &mut [u8], scalar: &Octet) {
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-        {
-            if is_x86_feature_detected!("avx2") {
-                unsafe {
-                    return mulassign_scalar_avx2(octets, scalar);
-                }
+    {
+        if is_x86_feature_detected!("avx2") {
+            unsafe {
+                return mulassign_scalar_avx2(octets, scalar);
             }
         }
+    }
 
     return mulassign_scalar_fallback(octets, scalar);
 }
@@ -1537,13 +1537,13 @@ unsafe fn add_assign_avx2(octets: &mut [u8], other: &[u8]) {
 
 pub fn add_assign(octets: &mut [u8], other: &[u8]) {
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-        {
-            if is_x86_feature_detected!("avx2") {
-                unsafe {
-                    return add_assign_avx2(octets, other);
-                }
+    {
+        if is_x86_feature_detected!("avx2") {
+            unsafe {
+                return add_assign_avx2(octets, other);
             }
         }
+    }
 
     return add_assign_fallback(octets, other);
 }
@@ -1552,18 +1552,18 @@ pub fn add_assign(octets: &mut [u8], other: &[u8]) {
 pub struct Polynomial {
     // largest is 0: x^2 + x + c
     // x^2 is 0 index
-    pub coefficients: Vec<Octet>
+    pub coefficients: Vec<Octet>,
 }
 
 impl Polynomial {
     pub fn create_generator_polynomial(degree: u8) -> Polynomial {
         let mut generator = Polynomial {
-            coefficients: vec![Octet::one()]
+            coefficients: vec![Octet::one()],
         };
 
         for i in 0..degree {
             let poly = Polynomial {
-                coefficients: vec![Octet::one(), Octet::alpha(i)]
+                coefficients: vec![Octet::one(), Octet::alpha(i)],
             };
             generator = generator.mul(&poly);
         }
@@ -1573,12 +1573,13 @@ impl Polynomial {
 
     pub fn new(coefficients: &[u8]) -> Polynomial {
         Polynomial {
-            coefficients: coefficients.iter().map(|x| Octet::new(*x)).collect()
+            coefficients: coefficients.iter().map(|x| Octet::new(*x)).collect(),
         }
     }
 
     pub fn mul(&self, other: &Polynomial) -> Polynomial {
-        let mut result = vec![Octet::zero(); self.coefficients.len() + other.coefficients.len() - 1];
+        let mut result =
+            vec![Octet::zero(); self.coefficients.len() + other.coefficients.len() - 1];
         for i in 0..self.coefficients.len() {
             for j in 0..other.coefficients.len() {
                 result[i + j] += &self.coefficients[i] * &other.coefficients[j];
@@ -1586,7 +1587,7 @@ impl Polynomial {
         }
 
         Polynomial {
-            coefficients: result
+            coefficients: result,
         }
     }
 }
@@ -1595,10 +1596,10 @@ impl Polynomial {
 mod tests {
     use rand::Rng;
 
-    use crate::gf256::{Octet, fused_addassign_mul_scalar, mulassign_scalar};
     use crate::gf256::Polynomial;
     use crate::gf256::OCT_EXP;
     use crate::gf256::OCT_LOG;
+    use crate::gf256::{fused_addassign_mul_scalar, mulassign_scalar, Octet};
 
     #[test]
     fn polynomial_mul() {
@@ -1609,7 +1610,7 @@ mod tests {
             value: rand::thread_rng().gen_range(1, 255),
         };
         let poly = Polynomial {
-            coefficients: vec![octet.clone(), octet2.clone()]
+            coefficients: vec![octet.clone(), octet2.clone()],
         };
         let poly2 = Polynomial::create_generator_polynomial(0);
         assert_eq!(&poly, &poly.mul(&poly2));

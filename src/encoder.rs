@@ -1,11 +1,11 @@
-use crate::gf256::Polynomial;
 use crate::base::Block;
 use crate::block_polynomial::BlockPolynomial;
+use crate::gf256::Polynomial;
 
 pub struct Encoder {
     data_blocks: u8,
     repair_blocks: u8,
-    generator: Polynomial
+    generator: Polynomial,
 }
 
 impl Encoder {
@@ -13,7 +13,7 @@ impl Encoder {
         Encoder {
             data_blocks,
             repair_blocks,
-            generator: Polynomial::create_generator_polynomial(repair_blocks)
+            generator: Polynomial::create_generator_polynomial(repair_blocks),
         }
     }
 
@@ -25,11 +25,12 @@ impl Encoder {
         // then [block_length, 2 * block_length) in the second
         let mut blocks = vec![];
         for i in 0..self.data_blocks as usize {
-            blocks.push(data[i * block_length..(i + 1)*block_length].to_vec())
+            blocks.push(data[i * block_length..(i + 1) * block_length].to_vec())
         }
 
         let block_poly = BlockPolynomial::new(blocks);
-        let repair_poly = block_poly.zero_extend_div_remainder(self.repair_blocks as usize, &self.generator);
+        let repair_poly =
+            block_poly.zero_extend_div_remainder(self.repair_blocks as usize, &self.generator);
 
         return (block_poly.into_blocks(), repair_poly.coefficient_arrays);
     }

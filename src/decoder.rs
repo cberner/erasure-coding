@@ -1,17 +1,17 @@
-use crate::gf256::{Polynomial, Octet, mulassign_scalar, add_assign};
 use crate::base::Block;
 use crate::block_polynomial::BlockPolynomial;
+use crate::gf256::{add_assign, mulassign_scalar, Octet, Polynomial};
 
 pub struct Decoder {
     data_blocks: u8,
-    repair_blocks: u8
+    repair_blocks: u8,
 }
 
 impl Decoder {
     pub fn new(data_blocks: u8, repair_blocks: u8) -> Decoder {
         Decoder {
             data_blocks,
-            repair_blocks
+            repair_blocks,
         }
     }
 
@@ -54,15 +54,25 @@ impl Decoder {
         return locator;
     }
 
-    fn calculate_erasure_evaluator(&self, syndrome: &BlockPolynomial, erasure_locator: &Polynomial) -> BlockPolynomial {
+    fn calculate_erasure_evaluator(
+        &self,
+        syndrome: &BlockPolynomial,
+        erasure_locator: &Polynomial,
+    ) -> BlockPolynomial {
         let mut poly = Polynomial::new(&vec![0; (erasure_locator.coefficients.len() + 1) as usize]);
         poly.coefficients[0] = Octet::one();
 
-        return syndrome.mul_poly(erasure_locator).zero_extend_div_remainder(0, &poly);
+        return syndrome
+            .mul_poly(erasure_locator)
+            .zero_extend_div_remainder(0, &poly);
     }
 
     // Forney algorithm
-    fn calculate_delta_correction(&self, erasure_evaluator: &BlockPolynomial, erasures: &[bool]) -> BlockPolynomial {
+    fn calculate_delta_correction(
+        &self,
+        erasure_evaluator: &BlockPolynomial,
+        erasures: &[bool],
+    ) -> BlockPolynomial {
         let block_length = erasure_evaluator.coefficient_arrays[0].len();
         let mut error_locations = vec![];
         let mut full_message_erasure_positions = vec![];
@@ -83,7 +93,8 @@ impl Decoder {
             let mut locator_prime = Octet::one();
             for j in 0..error_count {
                 if j != i {
-                    locator_prime = &locator_prime * &(Octet::one() - &inverse_error_value * &error_locations[j]);
+                    locator_prime = &locator_prime
+                        * &(Octet::one() - &inverse_error_value * &error_locations[j]);
                 }
             }
             assert_ne!(locator_prime, Octet::zero());
@@ -130,13 +141,15 @@ impl Decoder {
 
 #[cfg(test)]
 mod tests {
-    use crate::Decoder;
     use crate::gf256::Polynomial;
+    use crate::Decoder;
 
     #[test]
     fn erasure_locator() {
         let erasures = vec![true, false, false, true, true];
-        assert_eq!(Polynomial::new(&[19, 28, 152, 1]),
-                   Decoder::new(5, 3).calculate_erasure_locator(&erasures));
+        assert_eq!(
+            Polynomial::new(&[19, 28, 152, 1]),
+            Decoder::new(5, 3).calculate_erasure_locator(&erasures)
+        );
     }
 }
