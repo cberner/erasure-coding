@@ -1,6 +1,6 @@
+use erasure_coding::{Block, Decoder, Encoder};
 use rand::Rng;
 use std::time::Instant;
-use erasure_coding::{Encoder, Decoder, Block};
 
 const TARGET_TOTAL_BYTES: usize = 128 * 1024 * 1024;
 const DATA_SHARD_COUNTS: [usize; 8] = [3, 7, 10, 30, 70, 100, 150, 200];
@@ -17,8 +17,8 @@ fn benchmark(shard_size: u16) -> u64 {
     for (data_shards, repair_shards) in DATA_SHARD_COUNTS.iter().zip(REPAIR_SHARD_COUNTS.iter()) {
         let elements = data_shards * shard_size as usize;
         let mut data: Vec<u8> = vec![0; elements];
-        for i in 0..elements {
-            data[i] = rand::thread_rng().gen();
+        for item in data.iter_mut() {
+            *item = rand::thread_rng().gen();
         }
 
         let iterations = TARGET_TOTAL_BYTES / elements;
@@ -26,7 +26,8 @@ fn benchmark(shard_size: u16) -> u64 {
         let (data_blocks, repair) = encoder.encode(&data);
         let mut erased_datas = vec![];
         for _ in 0..iterations {
-            let mut erased: Vec<Option<Block>> = data_blocks.iter().map(|x| Some(x.clone())).collect();
+            let mut erased: Vec<Option<Block>> =
+                data_blocks.iter().map(|x| Some(x.clone())).collect();
             for _ in 0..*repair_shards {
                 let i = rand::thread_rng().gen_range(0, *data_shards);
                 erased[i] = None;
@@ -35,8 +36,8 @@ fn benchmark(shard_size: u16) -> u64 {
         }
         let now = Instant::now();
         let decoder = Decoder::new(*data_shards as u8, *repair_shards as u8);
-        for i in 0..iterations {
-            let result = decoder.decode(&erased_datas[i], &repair);
+        for erased in &erased_datas {
+            let result = decoder.decode(erased, &repair);
             black_box_value += result[0] as u64;
         }
         let elapsed = now.elapsed();
@@ -50,7 +51,7 @@ fn benchmark(shard_size: u16) -> u64 {
                  throughput);
     }
 
-    return black_box_value;
+    black_box_value
 }
 
 fn main() {
